@@ -12,7 +12,7 @@ CORS(app)
 BASE = os.path.join(os.path.dirname(__file__), '..', 'data')
 
 print("Loading data files...")
-df_violations  = pd.read_csv(os.path.join(BASE, 'violations.csv'))
+df_violations  = pd.read_csv(os.path.join(BASE, 'violations_sample.csv'))
 df_hotspots    = pd.read_csv(os.path.join(BASE, 'hotspots.csv'))
 df_clusters    = pd.read_csv(os.path.join(BASE, 'clusters.csv'))
 
