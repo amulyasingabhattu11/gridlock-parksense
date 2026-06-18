@@ -4,6 +4,24 @@ import './App.css';
 
 const API = 'https://gridlock-backend-d08s.onrender.com';
 const RISK_COLORS = { CRITICAL: '#FF3B3B', HIGH: '#FF8C00', MEDIUM: '#FFD700', LOW: '#00C851' };
+const PIE_COLORS = ['#FF3B3B','#FF8C00','#FFD700','#00C851','#4f8ef7','#9b59b6','#1abc9c','#e74c3c','#3498db','#f39c12'];
+
+function VehicleLegend({ data }) {
+  const total = data.reduce((s, d) => s + (d.count || 0), 0) || 1;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {data.map((d, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 14, height: 14, background: PIE_COLORS[i % PIE_COLORS.length], display: 'inline-block', borderRadius: 3 }} />
+          <div style={{ color: '#ddd', fontSize: 13 }}>
+            <div style={{ fontWeight: 600 }}>{d.vehicle_type}</div>
+            <div style={{ color: '#9aa', fontSize: 12 }}>{Math.round((d.count || 0) * 100 / total)}% • {d.count?.toLocaleString()}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function StatCard({ label, value, sub, color }) {
   return (
@@ -124,16 +142,23 @@ export default function App() {
 
               <div className="chart-card">
                 <h3>Vehicle Types in Violations</h3>
-                <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
-                    <Pie data={vehicles} dataKey="count" nameKey="vehicle_type" cx="50%" cy="50%" outerRadius={90} label={({ vehicle_type, percent }) => `${vehicle_type?.slice(0,8)} ${(percent * 100).toFixed(0)}%`}>
-                      {vehicles.map((_, i) => (
-                        <Cell key={i} fill={['#FF3B3B','#FF8C00','#FFD700','#00C851','#4f8ef7','#9b59b6','#1abc9c','#e74c3c','#3498db','#f39c12'][i % 10]} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={{ background: '#1e1e2e', border: '1px solid #333' }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ flex: '0 0 65%' }}>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie data={vehicles} dataKey="count" nameKey="vehicle_type" cx="50%" cy="50%" outerRadius={90} labelLine={false}>
+                          {vehicles.map((_, i) => (
+                            <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ background: '#1e1e2e', border: '1px solid #333' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div style={{ flex: '0 0 35%', paddingLeft: 20 }}>
+                    <VehicleLegend data={vehicles} />
+                  </div>
+                </div>
               </div>
             </div>
           </>
