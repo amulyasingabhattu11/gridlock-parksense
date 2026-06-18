@@ -30,6 +30,38 @@ print(f"✅ {len(df_violations):,} violations | "
       f"{len(df_hotspots)} hotspots | "
       f"{len(df_clusters)} clusters ready\n")
 
+# Compute a recency-weighted priority score (30-day window) so the API
+# can surface hotspots that are both high-volume and recently active.
+try:
+    latest = df_violations['created_datetime'].max()
+    recent_threshold = latest - pd.Timedelta(days=30)
+    recent_counts = (
+        df_violations[df_violations['created_datetime'] >= recent_threshold]
+        .groupby('junction_name')
+        .size()
+        .rename('recent_violations')
+    )
+    df_hotspots = df_hotspots.merge(recent_counts, on='junction_name', how='left')
+    df_hotspots['recent_violations'] = df_hotspots['recent_violations'].fillna(0).astype(int)
+
+    total_max = df_hotspots['total_violations'].max() if 'total_violations' in df_hotspots.columns else 1
+    recent_max = df_hotspots['recent_violations'].max() if 'recent_violations' in df_hotspots.columns else 1
+    df_hotspots['norm_total'] = df_hotspots['total_violations'] / float(total_max)
+    df_hotspots['norm_recent'] = df_hotspots['recent_violations'] / float(recent_max) if recent_max > 0 else 0.0
+
+    # Weighted combination: more emphasis on historical volume but allow recency to move ranking.
+    ALPHA = float(os.environ.get('RECENCY_ALPHA', 0.7))
+    df_hotspots['priority_score_recency'] = (
+        ALPHA * df_hotspots['norm_total'] + (1.0 - ALPHA) * df_hotspots['norm_recent']
+    ).round(4)
+    df_hotspots.drop(columns=['norm_total', 'norm_recent'], inplace=True)
+except Exception:
+    # If anything goes wrong, ensure df_hotspots still exists and has the column.
+    if 'recent_violations' not in df_hotspots.columns:
+        df_hotspots['recent_violations'] = 0
+    if 'priority_score_recency' not in df_hotspots.columns:
+        df_hotspots['priority_score_recency'] = df_hotspots.get('priority_score', 0.0)
+
 # ── HELPERS ───────────────────────────────────────────────────────────────────
 def safe_json(obj):
     """Convert numpy types to native Python for JSON serialization."""
@@ -91,19 +123,28 @@ def stats():
 def hotspots():
     """Top enforcement priority junctions."""
     limit = int(request.args.get('limit', 20))
-    exclude_no_junction = df_hotspots[
-        df_hotspots['junction_name'] != 'No Junction'
-    ].head(limit)
+    score = request.args.get('score', 'priority_score')
+
+    df = df_hotspots[df_hotspots['junction_name'] != 'No Junction'].copy()
+    # Choose sorting key
+    if score in ('recency', 'priority_score_recency'):
+        sort_key = 'priority_score_recency'
+    else:
+        sort_key = 'priority_score'
+
+    df = df.sort_values(sort_key, ascending=False).head(limit)
 
     records = []
-    for _, row in exclude_no_junction.iterrows():
+    for _, row in df.iterrows():
         records.append({
-            "junction_name":    str(row['junction_name']),
-            "total_violations": int(row['total_violations']),
-            "unique_days":      int(row['unique_days']),
-            "priority_score":   round(float(row['priority_score']), 1),
-            "lat":              float(row['avg_lat']),
-            "lon":              float(row['avg_lon']),
+            "junction_name":         str(row['junction_name']),
+            "total_violations":      int(row.get('total_violations', 0)),
+            "recent_violations":     int(row.get('recent_violations', 0)),
+            "priority_score":        float(row.get('priority_score', 0.0)),
+            "priority_score_recency": float(row.get('priority_score_recency', 0.0)),
+            "unique_days":           int(row.get('unique_days', 0)),
+            "lat":                   float(row.get('avg_lat', 0.0)),
+            "lon":                   float(row.get('avg_lon', 0.0)),
         })
     return jsonify(records)
 
