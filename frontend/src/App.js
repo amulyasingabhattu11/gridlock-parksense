@@ -4,6 +4,21 @@ import './App.css';
 
 const API = 'https://gridlock-backend-d08s.onrender.com';
 const RISK_COLORS = { CRITICAL: '#FF3B3B', HIGH: '#FF8C00', MEDIUM: '#FFD700', LOW: '#00C851' };
+const PIE_COLORS = ['#FF3B3B','#FF8C00','#FFD700','#00C851','#4f8ef7','#9b59b6','#1abc9c','#e74c3c','#3498db','#f39c12'];
+
+function renderPieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }) {
+  const RAD = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RAD);
+  const y = cy + radius * Math.sin(-midAngle * RAD);
+  const fill = PIE_COLORS[index % PIE_COLORS.length];
+  const text = `${String(name).slice(0,8)} ${Math.round(percent * 100)}%`;
+  return (
+    <text x={x} y={y} fill={fill} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" style={{ fontSize: 11 }}>
+      {text}
+    </text>
+  );
+}
 
 function StatCard({ label, value, sub, color }) {
   return (
@@ -126,10 +141,10 @@ export default function App() {
                 <h3>Vehicle Types in Violations</h3>
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
-                    <Pie data={vehicles} dataKey="count" nameKey="vehicle_type" cx="50%" cy="50%" outerRadius={90} label={({ vehicle_type, percent }) => `${vehicle_type?.slice(0,8)} ${(percent * 100).toFixed(0)}%`}>
-                      {vehicles.map((_, i) => (
-                        <Cell key={i} fill={['#FF3B3B','#FF8C00','#FFD700','#00C851','#4f8ef7','#9b59b6','#1abc9c','#e74c3c','#3498db','#f39c12'][i % 10]} />
-                      ))}
+                    <Pie data={vehicles} dataKey="count" nameKey="vehicle_type" cx="50%" cy="50%" outerRadius={90} label={renderPieLabel} labelLine={false}>
+                        {vehicles.map((_, i) => (
+                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        ))}
                     </Pie>
                     <Tooltip contentStyle={{ background: '#1e1e2e', border: '1px solid #333' }} />
                   </PieChart>
