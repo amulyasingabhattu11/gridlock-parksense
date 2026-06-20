@@ -180,7 +180,7 @@ body {
 .score-bar {
   height: 6px; border-radius: 3px;
   background: linear-gradient(90deg, #4f8ef7, #FF3B3B);
-  min-width: 4px;
+  min-width: 0;
 }
 .score-bar-wrap span { font-size: 12px; color: #888; white-space: nowrap; }
 

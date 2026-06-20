@@ -68,6 +68,9 @@ export default function App() {
     }).catch(() => setLoading(false));
   }, []);
 
+  // Use a safe maximum for recency scores to avoid division by 0/undefined
+  const maxRecency = Math.max(...hotspots.map(h => h.priority_score_recency || 0), 1);
+
   if (loading) return (
     <div className="loading">
       <div className="spinner" />
@@ -262,8 +265,11 @@ export default function App() {
                       <td>{h.unique_days} / 152</td>
                       <td>
                         <div className="score-bar-wrap">
-                          <div className="score-bar" style={{ width: `${Math.min(100, (h.priority_score_recency / hotspots[0]?.priority_score_recency) * 100)}%` }} />
-                          <span>{h.priority_score_recency?.toFixed(0)}</span>
+                          <div
+                            className="score-bar"
+                            style={{ width: `${Math.min(100, (h.priority_score_recency / maxRecency) * 100)}%` }}
+                          />
+                          <span>{h.priority_score_recency ? h.priority_score_recency.toFixed(0) : (h.priority_score ? h.priority_score.toFixed(0) : '—')}</span>
                         </div>
                       </td>
                     </tr>
